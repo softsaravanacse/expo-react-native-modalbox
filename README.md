@@ -1,4 +1,7 @@
-# react-native-modalbox
+# expo-react-native-modalbox
+Forked from react-native-modalbox to resolve the following warning 
+
+Warning: componentWillReceiveProps has been renamed, and is not recommended for use. See https://fb.me/react-async-component-lifecycle-hooks for details.
 
 [![npm](https://img.shields.io/npm/dm/react-native-modalbox.svg?maxAge=2592000)]()
 [![npm](https://img.shields.io/npm/dt/react-native-modalbox.svg?maxAge=2592000)]()   
