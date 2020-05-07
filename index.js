@@ -14,10 +14,7 @@ import {
   Keyboard
 } from 'react-native';
 
-const {
-  height: SCREEN_HEIGHT,
-  width: SCREEN_WIDTH
-} = Dimensions.get('window');
+const {height: SCREEN_HEIGHT, width: SCREEN_WIDTH} = Dimensions.get('window');
 const styles = StyleSheet.create({
   wrapper: {
     backgroundColor: 'white'
@@ -100,11 +97,11 @@ export default class ModalBox extends React.PureComponent {
     this.open = this.open.bind(this);
     this.close = this.close.bind(this);
 
-    const position = props.startOpen ?
-      new Animated.Value(0) :
-      new Animated.Value(
-        props.entry === 'top' ? -SCREEN_HEIGHT : SCREEN_HEIGHT
-      );
+    const position = props.startOpen
+      ? new Animated.Value(0)
+      : new Animated.Value(
+          props.entry === 'top' ? -SCREEN_HEIGHT : SCREEN_HEIGHT
+        );
     this.state = {
       position,
       backdropOpacity: new Animated.Value(0),
@@ -163,9 +160,7 @@ export default class ModalBox extends React.PureComponent {
    * The keyboard is hidden (IOS only)
    */
   onKeyboardHide(evt) {
-    this.setState({
-      keyboardOffset: 0
-    });
+    this.setState({keyboardOffset: 0});
   }
 
   /*
@@ -177,9 +172,7 @@ export default class ModalBox extends React.PureComponent {
     const keyboardFrame = evt.endCoordinates;
     const keyboardHeight = this.state.containerHeight - keyboardFrame.screenY;
 
-    this.setState({
-      keyboardOffset: keyboardHeight
-    }, () => {
+    this.setState({keyboardOffset: keyboardHeight}, () => {
       this.animateOpen();
     });
   }
@@ -191,9 +184,7 @@ export default class ModalBox extends React.PureComponent {
     if (this.state.isAnimateBackdrop && this.state.animBackdrop) {
       this.state.animBackdrop.stop();
     }
-    this.setState({
-      isAnimateBackdrop: true
-    });
+    this.setState({isAnimateBackdrop: true});
 
     let animBackdrop = Animated.timing(this.state.backdropOpacity, {
       toValue: 1,
@@ -215,9 +206,7 @@ export default class ModalBox extends React.PureComponent {
     if (this.state.isAnimateBackdrop && this.state.animBackdrop) {
       this.state.animBackdrop.stop();
     }
-    this.setState({
-      isAnimateBackdrop: true
-    });
+    this.setState({isAnimateBackdrop: true});
 
     let animBackdrop = Animated.timing(this.state.backdropOpacity, {
       toValue: 0,
@@ -238,9 +227,7 @@ export default class ModalBox extends React.PureComponent {
   stopAnimateOpen() {
     if (this.state.isAnimateOpen) {
       if (this.state.animOpen) this.state.animOpen.stop();
-      this.setState({
-        isAnimateOpen: false
-      });
+      this.setState({isAnimateOpen: false});
     }
   }
 
@@ -253,7 +240,8 @@ export default class ModalBox extends React.PureComponent {
     // Backdrop fadeIn
     if (this.props.backdrop) this.animateBackdropOpen();
 
-    this.setState({
+    this.setState(
+      {
         isAnimateOpen: true,
         isOpen: true
       },
@@ -294,9 +282,7 @@ export default class ModalBox extends React.PureComponent {
   stopAnimateClose() {
     if (this.state.isAnimateClose) {
       if (this.state.animClose) this.state.animClose.stop();
-      this.setState({
-        isAnimateClose: false
-      });
+      this.setState({isAnimateClose: false});
     }
   }
 
@@ -309,14 +295,17 @@ export default class ModalBox extends React.PureComponent {
     // Backdrop fadeout
     if (this.props.backdrop) this.animateBackdropClose();
 
-    this.setState({
+    this.setState(
+      {
         isAnimateClose: true,
         isOpen: false
       },
       () => {
         let animClose = Animated.timing(this.state.position, {
-          toValue: this.props.entry === 'top' ?
-            -this.state.containerHeight : this.state.containerHeight,
+          toValue:
+            this.props.entry === 'top'
+              ? -this.state.containerHeight
+              : this.state.containerHeight,
           duration: this.props.animationDuration,
           easing: this.props.easing,
           useNativeDriver: this.props.useNativeDriver
@@ -365,7 +354,7 @@ export default class ModalBox extends React.PureComponent {
         this.props.isDisabled ||
         (this.props.swipeArea &&
           evt.nativeEvent.pageY - this.state.positionDest >
-          this.props.swipeArea)
+            this.props.swipeArea)
       ) {
         inSwipeArea = false;
         return false;
@@ -374,15 +363,13 @@ export default class ModalBox extends React.PureComponent {
       return true;
     };
 
-    const animEvt = Animated.event([null, {
-      customY: position
-    }]);
+    const animEvt = Animated.event([null, {customY: position}]);
 
     const onPanMove = (evt, state) => {
       const newClosingState =
-        this.props.entry === 'top' ?
-        -state.dy > this.props.swipeThreshold :
-        state.dy > this.props.swipeThreshold;
+        this.props.entry === 'top'
+          ? -state.dy > this.props.swipeThreshold
+          : state.dy > this.props.swipeThreshold;
       if (this.props.entry === 'top' ? state.dy > 0 : state.dy < 0) return;
       if (newClosingState != closingState && this.props.onClosingState)
         this.props.onClosingState(newClosingState);
@@ -396,9 +383,9 @@ export default class ModalBox extends React.PureComponent {
       if (!inSwipeArea) return;
       inSwipeArea = false;
       if (
-        this.props.entry === 'top' ?
-        -state.dy > this.props.swipeThreshold :
-        state.dy > this.props.swipeThreshold
+        this.props.entry === 'top'
+          ? -state.dy > this.props.swipeThreshold
+          : state.dy > this.props.swipeThreshold
       ) {
         this.close();
       } else if (!this.state.isOpen) {
@@ -442,9 +429,7 @@ export default class ModalBox extends React.PureComponent {
       height == this.state.containerHeight &&
       width == this.state.containerWidth
     ) {
-      this.setState({
-        isInitialized: true
-      });
+      this.setState({isInitialized: true});
       return;
     }
 
@@ -467,173 +452,133 @@ export default class ModalBox extends React.PureComponent {
     let backdrop = null;
 
     if (this.props.backdrop) {
-      backdrop = ( <
-          TouchableWithoutFeedback onPress = {
-            this.props.backdropPressToClose ? this.close : null
-          } >
-          <
-          Animated.View importantForAccessibility = "no"
-          style = {
-            [styles.absolute, {
-              opacity: this.state.backdropOpacity
-            }]
-          } >
-          <
-          View style = {
-            [
-              styles.absolute,
-              {
-                backgroundColor: this.props.backdropColor,
-                opacity: this.props.backdropOpacity
-              }
+      backdrop = (
+        <TouchableWithoutFeedback
+          onPress={this.props.backdropPressToClose ? this.close : null}>
+          <Animated.View
+            importantForAccessibility="no"
+            style={[styles.absolute, {opacity: this.state.backdropOpacity}]}>
+            <View
+              style={[
+                styles.absolute,
+                {
+                  backgroundColor: this.props.backdropColor,
+                  opacity: this.props.backdropOpacity
+                }
+              ]}
+            />
+            {this.props.backdropContent || []}
+          </Animated.View>
+        </TouchableWithoutFeedback>
+      );
+    }
+
+    return backdrop;
+  }
+
+  renderContent() {
+    const size = {
+      height: this.state.containerHeight,
+      width: this.state.containerWidth
+    };
+    const offsetX = (this.state.containerWidth - this.state.width) / 2;
+
+    return (
+      <Animated.View
+        onLayout={this.onViewLayout}
+        style={[
+          styles.wrapper,
+          size,
+          this.props.style,
+          {
+            transform: [
+              {translateY: this.state.position},
+              {translateX: offsetX}
             ]
           }
-          /> {
-          this.props.backdropContent || []
-        } <
-        /Animated.View> < /
-      TouchableWithoutFeedback >
+        ]}
+        {...this.state.pan.panHandlers}>
+        {this.props.children}
+      </Animated.View>
     );
   }
 
-  return backdrop;
-}
+  /*
+   * Render the component
+   */
+  render() {
+    const visible =
+      this.state.isOpen ||
+      this.state.isAnimateOpen ||
+      this.state.isAnimateClose;
 
-renderContent() {
-  const size = {
-    height: this.state.containerHeight,
-    width: this.state.containerWidth
-  };
-  const offsetX = (this.state.containerWidth - this.state.width) / 2;
+    if (!visible) return <View />;
 
-  return ( <
-    Animated.View onLayout = {
-      this.onViewLayout
+    const content = (
+      <View
+        importantForAccessibility="yes"
+        accessibilityViewIsModal={true}
+        style={[styles.transparent, styles.absolute]}
+        pointerEvents={'box-none'}>
+        <View
+          style={{flex: 1}}
+          pointerEvents={'box-none'}
+          onLayout={this.onContainerLayout}>
+          {visible && this.renderBackdrop()}
+          {visible && this.renderContent()}
+        </View>
+      </View>
+    );
+
+    if (!this.props.coverScreen) return content;
+
+    return (
+      <Modal
+        onRequestClose={() => {
+          if (this.props.backButtonClose) {
+            this.close();
+          }
+        }}
+        supportedOrientations={[
+          'landscape',
+          'portrait',
+          'portrait-upside-down'
+        ]}
+        transparent
+        visible={visible}
+        hardwareAccelerated={true}>
+        {content}
+      </Modal>
+    );
+  }
+
+  /****************** PUBLIC METHODS **********************/
+
+  open() {
+    if (this.props.isDisabled) return;
+    if (
+      !this.state.isAnimateOpen &&
+      (!this.state.isOpen || this.state.isAnimateClose)
+    ) {
+      this.onViewLayoutCalculated = () => {
+        this.animateOpen();
+        if (this.props.backButtonClose && Platform.OS === 'android')
+          BackHandler.addEventListener('hardwareBackPress', this.onBackPress);
+        this.onViewLayoutCalculated = null;
+      };
+      this.setState({isAnimateOpen: true});
     }
-    style = {
-      [
-        styles.wrapper,
-        size,
-        this.props.style,
-        {
-          transform: [{
-              translateY: this.state.position
-            },
-            {
-              translateX: offsetX
-            }
-          ]
-        }
-      ]
-    } {
-      ...this.state.pan.panHandlers
-    } > {
-      this.props.children
-    } <
-    /Animated.View>
-  );
-}
+  }
 
-/*
- * Render the component
- */
-render() {
-  const visible =
-    this.state.isOpen ||
-    this.state.isAnimateOpen ||
-    this.state.isAnimateClose;
-
-  if (!visible) return <View / > ;
-
-  const content = ( <
-    View importantForAccessibility = "yes"
-    accessibilityViewIsModal = {
-      true
-    }
-    style = {
-      [styles.transparent, styles.absolute]
-    }
-    pointerEvents = {
-      'box-none'
-    } >
-    <
-    View style = {
-      {
-        flex: 1
-      }
-    }
-    pointerEvents = {
-      'box-none'
-    }
-    onLayout = {
-      this.onContainerLayout
-    } > {
-      visible && this.renderBackdrop()
-    } {
-      visible && this.renderContent()
-    } <
-    /View> < /
-    View >
-  );
-
-  if (!this.props.coverScreen) return content;
-
-  return ( <
-    Modal onRequestClose = {
-      () => {
-        if (this.props.backButtonClose) {
-          this.close();
-        }
-      }
-    }
-    supportedOrientations = {
-      [
-        'landscape',
-        'portrait',
-        'portrait-upside-down'
-      ]
-    }
-    transparent visible = {
-      visible
-    }
-    hardwareAccelerated = {
-      true
-    } > {
-      content
-    } <
-    /Modal>
-  );
-}
-
-/****************** PUBLIC METHODS **********************/
-
-open() {
-  if (this.props.isDisabled) return;
-  if (
-    !this.state.isAnimateOpen &&
-    (!this.state.isOpen || this.state.isAnimateClose)
-  ) {
-    this.onViewLayoutCalculated = () => {
-      this.animateOpen();
+  close() {
+    if (this.props.isDisabled) return;
+    if (
+      !this.state.isAnimateClose &&
+      (this.state.isOpen || this.state.isAnimateOpen)
+    ) {
+      this.animateClose();
       if (this.props.backButtonClose && Platform.OS === 'android')
-        BackHandler.addEventListener('hardwareBackPress', this.onBackPress);
-      this.onViewLayoutCalculated = null;
-    };
-    this.setState({
-      isAnimateOpen: true
-    });
+        BackHandler.removeEventListener('hardwareBackPress', this.onBackPress);
+    }
   }
-}
-
-close() {
-  if (this.props.isDisabled) return;
-  if (
-    !this.state.isAnimateClose &&
-    (this.state.isOpen || this.state.isAnimateOpen)
-  ) {
-    this.animateClose();
-    if (this.props.backButtonClose && Platform.OS === 'android')
-      BackHandler.removeEventListener('hardwareBackPress', this.onBackPress);
-  }
-}
 }
