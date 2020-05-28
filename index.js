@@ -1,6 +1,8 @@
-import React from 'react';
-import PropTypes from 'prop-types';
-import {
+'use strict';
+
+var React = require('react');
+var PropTypes = require('prop-types');
+var {
   View,
   StyleSheet,
   PanResponder,
@@ -12,28 +14,38 @@ import {
   Platform,
   Modal,
   Keyboard
-} from 'react-native';
+} = require('react-native');
 
-const {height: SCREEN_HEIGHT, width: SCREEN_WIDTH} = Dimensions.get('window');
-const styles = StyleSheet.create({
+var createReactClass = require('create-react-class');
+
+var BackButton = BackHandler;
+
+var screen = Dimensions.get('window');
+
+var styles = StyleSheet.create({
+
   wrapper: {
-    backgroundColor: 'white'
+    backgroundColor: "white"
   },
+
   transparent: {
     zIndex: 2,
     backgroundColor: 'rgba(0,0,0,0)'
   },
+
   absolute: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     bottom: 0,
     left: 0,
     right: 0
   }
+
 });
 
-export default class ModalBox extends React.PureComponent {
-  static propTypes = {
+var ModalBox = createReactClass({
+
+  propTypes: {
     isOpen: PropTypes.bool,
     isDisabled: PropTypes.bool,
     startOpen: PropTypes.bool,
@@ -54,322 +66,288 @@ export default class ModalBox extends React.PureComponent {
     keyboardTopOffset: PropTypes.number,
     onClosed: PropTypes.func,
     onOpened: PropTypes.func,
-    onClosingState: PropTypes.func
-  };
+    onClosingState: PropTypes.func,
+  },
 
-  static defaultProps = {
-    startOpen: false,
-    backdropPressToClose: true,
-    swipeToClose: true,
-    swipeThreshold: 50,
-    position: 'center',
-    backdrop: true,
-    backdropOpacity: 0.5,
-    backdropColor: 'black',
-    backdropContent: null,
-    animationDuration: 400,
-    backButtonClose: false,
-    easing: Easing.elastic(0.8),
-    coverScreen: false,
-    keyboardTopOffset: Platform.OS == 'ios' ? 22 : 0,
-    useNativeDriver: true
-  };
+  getDefaultProps: function () {
+    return {
+      startOpen: false,
+      backdropPressToClose: true,
+      swipeToClose: true,
+      swipeThreshold: 50,
+      position: "center",
+      backdrop: true,
+      backdropOpacity: 0.5,
+      backdropColor: "black",
+      backdropContent: null,
+      animationDuration: 400,
+      backButtonClose: false,
+      easing: Easing.elastic(0.8),
+      coverScreen: false,
+      keyboardTopOffset: Platform.OS == 'ios' ? 22 : 0,
+      useNativeDriver: true
+    };
+  },
 
-  constructor(props) {
-    super(props);
-
-    this.onBackPress = this.onBackPress.bind(this);
-    this.handleOpenning = this.handleOpenning.bind(this);
-    this.onKeyboardHide = this.onKeyboardHide.bind(this);
-    this.onKeyboardChange = this.onKeyboardChange.bind(this);
-    this.animateBackdropOpen = this.animateBackdropOpen.bind(this);
-    this.animateBackdropClose = this.animateBackdropClose.bind(this);
-    this.stopAnimateOpen = this.stopAnimateOpen.bind(this);
-    this.animateOpen = this.animateOpen.bind(this);
-    this.stopAnimateClose = this.stopAnimateClose.bind(this);
-    this.animateClose = this.animateClose.bind(this);
-    this.calculateModalPosition = this.calculateModalPosition.bind(this);
-    this.createPanResponder = this.createPanResponder.bind(this);
-    this.onViewLayout = this.onViewLayout.bind(this);
-    this.onContainerLayout = this.onContainerLayout.bind(this);
-    this.renderBackdrop = this.renderBackdrop.bind(this);
-    this.renderContent = this.renderContent.bind(this);
-    this.open = this.open.bind(this);
-    this.close = this.close.bind(this);
-
-    const position = props.startOpen
-      ? new Animated.Value(0)
-      : new Animated.Value(
-          props.entry === 'top' ? -SCREEN_HEIGHT : SCREEN_HEIGHT
-        );
-    this.state = {
-      position,
+  getInitialState: function () {
+    var position = this.props.entry === 'top' ? -screen.height : screen.height;
+    return {
+      position: this.props.startOpen ? new Animated.Value(0) : new Animated.Value(position),
       backdropOpacity: new Animated.Value(0),
-      isOpen: props.startOpen,
+      isOpen: this.props.startOpen,
       isAnimateClose: false,
       isAnimateOpen: false,
       swipeToClose: false,
-      height: SCREEN_HEIGHT,
-      width: SCREEN_WIDTH,
-      containerHeight: SCREEN_HEIGHT,
-      containerWidth: SCREEN_WIDTH,
+      height: screen.height,
+      width: screen.width,
+      containerHeight: screen.height,
+      containerWidth: screen.width,
       isInitialized: false,
-      keyboardOffset: 0,
-      pan: this.createPanResponder(position)
+      keyboardOffset: 0
     };
+  },
 
-    // Needed for iOS because the keyboard covers the screen
+  onBackPress () {
+    this.close()
+    return true
+  },
+
+  UNSAFE_componentWillUnmount: function() {
+    this.createPanResponder();
+    this.handleOpenning(this.props);
+    // Needed for IOS because the keyboard covers the screen
     if (Platform.OS === 'ios') {
       this.subscriptions = [
         Keyboard.addListener('keyboardWillChangeFrame', this.onKeyboardChange),
         Keyboard.addListener('keyboardDidHide', this.onKeyboardHide)
       ];
     }
-  }
+  },
 
-  componentDidMount() {
-    this.handleOpenning();
-  }
+  componentWillUnmount: function() {
+    if (this.subscriptions) this.subscriptions.forEach((sub) => sub.remove());
+    if (this.props.backButtonClose && Platform.OS === 'android') BackButton.removeEventListener('hardwareBackPress', this.onBackPress);
+  },
 
-  componentDidUpdate(prevProps) {
-    if (this.props.isOpen != prevProps.isOpen) {
-      this.handleOpenning();
-    }
-  }
+  componentWillReceiveProps: function(props) {
+     if(this.props.isOpen != props.isOpen){
+        this.handleOpenning(props);
+     }
+  },
 
-  componentWillUnmount() {
-    if (this.subscriptions) this.subscriptions.forEach(sub => sub.remove());
-    if (this.props.backButtonClose && Platform.OS === 'android')
-      BackHandler.removeEventListener('hardwareBackPress', this.onBackPress);
-  }
-
-  onBackPress() {
-    this.close();
-    return true;
-  }
-
-  handleOpenning() {
-    if (typeof this.props.isOpen == 'undefined') return;
-    if (this.props.isOpen) this.open();
-    else this.close();
-  }
+  handleOpenning: function(props) {
+    if (typeof props.isOpen == "undefined") return;
+    if (props.isOpen)
+      this.open();
+    else
+      this.close();
+  },
 
   /****************** ANIMATIONS **********************/
 
   /*
    * The keyboard is hidden (IOS only)
    */
-  onKeyboardHide(evt) {
-    this.setState({keyboardOffset: 0});
-  }
+  onKeyboardHide: function(evt) {
+    this.setState({ keyboardOffset: 0 });
+  },
 
   /*
    * The keyboard frame changed, used to detect when the keyboard open, faster than keyboardDidShow (IOS only)
    */
-  onKeyboardChange(evt) {
+  onKeyboardChange: function(evt) {
     if (!evt) return;
     if (!this.state.isOpen) return;
-    const keyboardFrame = evt.endCoordinates;
-    const keyboardHeight = this.state.containerHeight - keyboardFrame.screenY;
+    var keyboardFrame = evt.endCoordinates;
+    var keyboardHeight = this.state.containerHeight - keyboardFrame.screenY;
 
-    this.setState({keyboardOffset: keyboardHeight}, () => {
+    this.setState({ keyboardOffset: keyboardHeight }, () => {
       this.animateOpen();
     });
-  }
+  },
 
   /*
    * Open animation for the backdrop, will fade in
    */
-  animateBackdropOpen() {
+  animateBackdropOpen: function() {
     if (this.state.isAnimateBackdrop && this.state.animBackdrop) {
       this.state.animBackdrop.stop();
     }
-    this.setState({isAnimateBackdrop: true});
+    this.setState({ isAnimateBackdrop: true });
 
-    let animBackdrop = Animated.timing(this.state.backdropOpacity, {
-      toValue: 1,
-      duration: this.props.animationDuration,
-      easing: this.props.easing,
-      useNativeDriver: this.props.useNativeDriver
-    }).start(() => {
+    let animBackdrop = Animated.timing(
+      this.state.backdropOpacity,
+      {
+        toValue: 1,
+        duration: this.props.animationDuration,
+        easing: this.props.easing,
+        useNativeDriver: this.props.useNativeDriver,
+      }
+    ).start(() => {
       this.setState({
         isAnimateBackdrop: false,
         animBackdrop
       });
     });
-  }
+  },
 
   /*
    * Close animation for the backdrop, will fade out
    */
-  animateBackdropClose() {
+  animateBackdropClose: function() {
     if (this.state.isAnimateBackdrop && this.state.animBackdrop) {
       this.state.animBackdrop.stop();
     }
-    this.setState({isAnimateBackdrop: true});
+    this.setState({ isAnimateBackdrop: true });
 
-    let animBackdrop = Animated.timing(this.state.backdropOpacity, {
-      toValue: 0,
-      duration: this.props.animationDuration,
-      easing: this.props.easing,
-      useNativeDriver: this.props.useNativeDriver
-    }).start(() => {
+    let animBackdrop = Animated.timing(
+      this.state.backdropOpacity,
+      {
+        toValue: 0,
+        duration: this.props.animationDuration,
+        easing: this.props.easing,
+        useNativeDriver: this.props.useNativeDriver,
+      }
+    ).start(() => {
       this.setState({
         isAnimateBackdrop: false,
         animBackdrop
       });
     });
-  }
+  },
 
   /*
    * Stop opening animation
    */
-  stopAnimateOpen() {
+  stopAnimateOpen: function() {
     if (this.state.isAnimateOpen) {
       if (this.state.animOpen) this.state.animOpen.stop();
-      this.setState({isAnimateOpen: false});
+      this.setState({ isAnimateOpen: false });
     }
-  }
+  },
 
   /*
    * Open animation for the modal, will move up
    */
-  animateOpen() {
+  animateOpen: function() {
     this.stopAnimateClose();
 
     // Backdrop fadeIn
-    if (this.props.backdrop) this.animateBackdropOpen();
+    if (this.props.backdrop)
+      this.animateBackdropOpen();
 
-    this.setState(
-      {
-        isAnimateOpen: true,
-        isOpen: true
-      },
-      () => {
-        requestAnimationFrame(() => {
-          // Detecting modal position
-          let positionDest = this.calculateModalPosition(
-            this.state.containerHeight - this.state.keyboardOffset,
-            this.state.containerWidth
-          );
-          if (
-            this.state.keyboardOffset &&
-            positionDest < this.props.keyboardTopOffset
-          ) {
-            positionDest = this.props.keyboardTopOffset;
-          }
-          let animOpen = Animated.timing(this.state.position, {
+    this.setState({
+      isAnimateOpen: true,
+      isOpen: true,
+    }, () => {
+      requestAnimationFrame(() => {
+        // Detecting modal position
+        let positionDest = this.calculateModalPosition(this.state.containerHeight - this.state.keyboardOffset, this.state.containerWidth);
+        if (this.state.keyboardOffset && (positionDest < this.props.keyboardTopOffset)) {
+          positionDest = this.props.keyboardTopOffset;
+        }
+        let animOpen = Animated.timing(
+          this.state.position,
+          {
             toValue: positionDest,
             duration: this.props.animationDuration,
             easing: this.props.easing,
-            useNativeDriver: this.props.useNativeDriver
-          }).start(() => {
-            this.setState({
-              isAnimateOpen: false,
-              animOpen,
-              positionDest
-            });
-            if (this.props.onOpened) this.props.onOpened();
+            useNativeDriver: this.props.useNativeDriver,
+          }
+        ).start(() => {
+          this.setState({
+            isAnimateOpen: false,
+            animOpen,
+            positionDest
           });
+          if (this.props.onOpened) this.props.onOpened();
         });
-      }
-    );
-  }
+      })
+    });
+  },
 
   /*
    * Stop closing animation
    */
-  stopAnimateClose() {
+  stopAnimateClose: function() {
     if (this.state.isAnimateClose) {
       if (this.state.animClose) this.state.animClose.stop();
-      this.setState({isAnimateClose: false});
+      this.setState({ isAnimateClose: false });
     }
-  }
+  },
 
   /*
    * Close animation for the modal, will move down
    */
-  animateClose() {
+  animateClose: function() {
     this.stopAnimateOpen();
 
     // Backdrop fadeout
-    if (this.props.backdrop) this.animateBackdropClose();
+    if (this.props.backdrop)
+      this.animateBackdropClose();
 
-    this.setState(
-      {
-        isAnimateClose: true,
-        isOpen: false
-      },
-      () => {
-        let animClose = Animated.timing(this.state.position, {
-          toValue:
-            this.props.entry === 'top'
-              ? -this.state.containerHeight
-              : this.state.containerHeight,
+    this.setState({
+      isAnimateClose: true,
+      isOpen: false,
+    }, () => {
+      let animClose = Animated.timing(
+        this.state.position,
+        {
+          toValue: this.props.entry === 'top' ? -this.state.containerHeight : this.state.containerHeight,
           duration: this.props.animationDuration,
           easing: this.props.easing,
-          useNativeDriver: this.props.useNativeDriver
-        }).start(() => {
-          // Keyboard.dismiss();   // make this optional. Easily user defined in .onClosed() callback
-          this.setState({
-            isAnimateClose: false,
-            animClose
-          }, () => {
-            /* Set the state to the starting position of the modal, preventing from animating where the swipe stopped */
-            this.state.position.setValue(this.props.entry === 'top' ? -this.state.containerHeight : this.state.containerHeight);
-          });
-          if (this.props.onClosed) this.props.onClosed();
+          useNativeDriver: this.props.useNativeDriver,
+        }
+      ).start(() => {
+        // Keyboard.dismiss();   // make this optional. Easily user defined in .onClosed() callback
+        this.setState({
+          isAnimateClose: false,
+          animClose
         });
-      }
-    );
-  }
+        if (this.props.onClosed) this.props.onClosed();
+      });
+    });
+  },
 
   /*
    * Calculate when should be placed the modal
    */
-  calculateModalPosition(containerHeight, containerWidth) {
-    let position = 0;
+  calculateModalPosition: function(containerHeight, containerWidth) {
+    var position = 0;
 
-    if (this.props.position == 'bottom') {
+    if (this.props.position == "bottom") {
       position = containerHeight - this.state.height;
-    } else if (this.props.position == 'center') {
+    }
+    else if (this.props.position == "center") {
       position = containerHeight / 2 - this.state.height / 2;
     }
     // Checking if the position >= 0
     if (position < 0) position = 0;
     return position;
-  }
+  },
 
   /*
    * Create the pan responder to detect gesture
    * Only used if swipeToClose is enabled
    */
-  createPanResponder(position) {
-    let closingState = false;
-    let inSwipeArea = false;
+  createPanResponder: function() {
+    var closingState = false;
+    var inSwipeArea  = false;
 
-    const onPanStart = (evt, state) => {
-      if (
-        !this.props.swipeToClose ||
-        this.props.isDisabled ||
-        (this.props.swipeArea &&
-          evt.nativeEvent.pageY - this.state.positionDest >
-            this.props.swipeArea)
-      ) {
-        inSwipeArea = false;
-        return false;
+    var onPanRelease = (evt, state) => {
+      if (!inSwipeArea) return;
+      inSwipeArea = false;
+      if (this.props.entry === 'top' ? -state.dy > this.props.swipeThreshold : state.dy > this.props.swipeThreshold)
+        this.animateClose();
+      else if (!this.state.isOpen) {
+        this.animateOpen();
       }
-      inSwipeArea = true;
-      return true;
     };
 
-    const animEvt = Animated.event([null, {customY: position}]);
+    var animEvt = Animated.event([null, {customY: this.state.position}]);
 
-    const onPanMove = (evt, state) => {
-      const newClosingState =
-        this.props.entry === 'top'
-          ? -state.dy > this.props.swipeThreshold
-          : state.dy > this.props.swipeThreshold;
+    var onPanMove = (evt, state) => {
+      var newClosingState = this.props.entry === 'top' ? -state.dy > this.props.swipeThreshold : state.dy > this.props.swipeThreshold;
       if (this.props.entry === 'top' ? state.dy > 0 : state.dy < 0) return;
       if (newClosingState != closingState && this.props.onClosingState)
         this.props.onClosingState(newClosingState);
@@ -379,34 +357,31 @@ export default class ModalBox extends React.PureComponent {
       animEvt(evt, state);
     };
 
-    const onPanRelease = (evt, state) => {
-      if (!inSwipeArea) return;
-      inSwipeArea = false;
-      if (
-        this.props.entry === 'top'
-          ? -state.dy > this.props.swipeThreshold
-          : state.dy > this.props.swipeThreshold
-      ) {
-        this.close();
-      } else if (!this.state.isOpen) {
-        this.animateOpen();
+    var onPanStart = (evt, state) => {
+      if (!this.props.swipeToClose || this.props.isDisabled || (this.props.swipeArea && (evt.nativeEvent.pageY - this.state.positionDest) > this.props.swipeArea)) {
+        inSwipeArea = false;
+        return false;
       }
+      inSwipeArea = true;
+      return true;
     };
 
-    return PanResponder.create({
-      onStartShouldSetPanResponder: onPanStart,
-      onPanResponderMove: onPanMove,
-      onPanResponderRelease: onPanRelease,
-      onPanResponderTerminate: onPanRelease
+    this.setState({
+      pan: PanResponder.create({
+        onStartShouldSetPanResponder: onPanStart,
+        onPanResponderMove: onPanMove,
+        onPanResponderRelease: onPanRelease,
+        onPanResponderTerminate: onPanRelease,
+      }),
     });
-  }
+  },
 
   /*
    * Event called when the modal view layout is calculated
    */
-  onViewLayout(evt) {
-    const height = evt.nativeEvent.layout.height;
-    const width = evt.nativeEvent.layout.width;
+  onViewLayout: function(evt) {
+    var height = evt.nativeEvent.layout.height;
+    var width = evt.nativeEvent.layout.width;
 
     // If the dimensions are still the same we're done
     let newState = {};
@@ -415,21 +390,18 @@ export default class ModalBox extends React.PureComponent {
     this.setState(newState);
 
     if (this.onViewLayoutCalculated) this.onViewLayoutCalculated();
-  }
+  },
 
   /*
    * Event called when the container view layout is calculated
    */
-  onContainerLayout(evt) {
-    const height = evt.nativeEvent.layout.height;
-    const width = evt.nativeEvent.layout.width;
+  onContainerLayout: function(evt) {
+    var height = evt.nativeEvent.layout.height;
+    var width = evt.nativeEvent.layout.width;
 
     // If the container size is still the same we're done
-    if (
-      height == this.state.containerHeight &&
-      width == this.state.containerWidth
-    ) {
-      this.setState({isInitialized: true});
+    if (height == this.state.containerHeight && width == this.state.containerWidth) {
+      this.setState({ isInitialized: true });
       return;
     }
 
@@ -443,30 +415,19 @@ export default class ModalBox extends React.PureComponent {
       containerHeight: height,
       containerWidth: width
     });
-  }
+  },
 
   /*
    * Render the backdrop element
    */
-  renderBackdrop() {
-    let backdrop = null;
+  renderBackdrop: function() {
+    var backdrop  = null;
 
     if (this.props.backdrop) {
       backdrop = (
-        <TouchableWithoutFeedback
-          onPress={this.props.backdropPressToClose ? this.close : null}>
-          <Animated.View
-            importantForAccessibility="no"
-            style={[styles.absolute, {opacity: this.state.backdropOpacity}]}>
-            <View
-              style={[
-                styles.absolute,
-                {
-                  backgroundColor: this.props.backdropColor,
-                  opacity: this.props.backdropOpacity
-                }
-              ]}
-            />
+        <TouchableWithoutFeedback onPress={this.props.backdropPressToClose ? this.close : null}>
+          <Animated.View importantForAccessibility="no" style={[styles.absolute, {opacity: this.state.backdropOpacity}]}>
+            <View style={[styles.absolute, {backgroundColor:this.props.backdropColor, opacity: this.props.backdropOpacity}]}/>
             {this.props.backdropContent || []}
           </Animated.View>
         </TouchableWithoutFeedback>
@@ -474,111 +435,82 @@ export default class ModalBox extends React.PureComponent {
     }
 
     return backdrop;
-  }
+  },
 
   renderContent() {
-    const size = {
-      height: this.state.containerHeight,
-      width: this.state.containerWidth
-    };
-    const offsetX = (this.state.containerWidth - this.state.width) / 2;
+    var size    = {height: this.state.containerHeight, width: this.state.containerWidth};
+    var offsetX = (this.state.containerWidth - this.state.width) / 2;
 
     return (
       <Animated.View
         onLayout={this.onViewLayout}
-        style={[
-          styles.wrapper,
-          size,
-          this.props.style,
-          {
-            transform: [
-              {translateY: this.state.position},
-              {translateX: offsetX}
-            ]
-          }
-        ]}
+        style={[styles.wrapper, size, this.props.style, {transform: [{translateY: this.state.position}, {translateX: offsetX}]} ]}
         {...this.state.pan.panHandlers}>
+        {this.props.backdropPressToClose && <TouchableWithoutFeedback onPress={this.close}><View style={[styles.absolute]} /></TouchableWithoutFeedback>}
         {this.props.children}
       </Animated.View>
-    );
-  }
+    )
+  },
 
   /*
    * Render the component
    */
-  render() {
-    const visible =
-      this.state.isOpen ||
-      this.state.isAnimateOpen ||
-      this.state.isAnimateClose;
+  render: function() {
 
-    if (!visible) return <View />;
+    var visible = this.state.isOpen || this.state.isAnimateOpen || this.state.isAnimateClose;
 
-    const content = (
-      <View
-        importantForAccessibility="yes"
-        accessibilityViewIsModal={true}
-        style={[styles.transparent, styles.absolute]}
-        pointerEvents={'box-none'}>
-        <View
-          style={{flex: 1}}
-          pointerEvents={'box-none'}
-          onLayout={this.onContainerLayout}>
+    if (!visible) return <View/>
+
+    var content = (
+      <View importantForAccessibility="yes" accessibilityViewIsModal={true} style={[styles.transparent, styles.absolute]} pointerEvents={'box-none'}>
+        <View style={{ flex: 1 }} pointerEvents={'box-none'} onLayout={this.onContainerLayout}>
           {visible && this.renderBackdrop()}
           {visible && this.renderContent()}
         </View>
       </View>
-    );
+    )
 
-    if (!this.props.coverScreen) return content;
+if (!this.props.coverScreen) return content;
 
     return (
       <Modal
         onRequestClose={() => {
           if (this.props.backButtonClose) {
-            this.close();
+            this.close()
           }
         }}
-        supportedOrientations={[
-          'landscape',
-          'portrait',
-          'portrait-upside-down'
-        ]}
-        transparent
-        visible={visible}
-        hardwareAccelerated={true}>
+        supportedOrientations={['landscape', 'portrait', 'portrait-upside-down']} transparent visible={visible}
+        hardwareAccelerated={true}
+      >
         {content}
       </Modal>
     );
-  }
+  },
 
   /****************** PUBLIC METHODS **********************/
 
-  open() {
+  open: function() {
     if (this.props.isDisabled) return;
-    if (
-      !this.state.isAnimateOpen &&
-      (!this.state.isOpen || this.state.isAnimateClose)
-    ) {
+    if (!this.state.isAnimateOpen && (!this.state.isOpen || this.state.isAnimateClose)) {
       this.onViewLayoutCalculated = () => {
+        this.setState({});
         this.animateOpen();
-        if (this.props.backButtonClose && Platform.OS === 'android')
-          BackHandler.addEventListener('hardwareBackPress', this.onBackPress);
-        this.onViewLayoutCalculated = null;
+        if(this.props.backButtonClose && Platform.OS === 'android') BackButton.addEventListener('hardwareBackPress', this.onBackPress)
+        delete this.onViewLayoutCalculated;
       };
-      this.setState({isAnimateOpen: true});
+      this.setState({isAnimateOpen : true});
+    }
+  },
+
+  close: function() {
+    if (this.props.isDisabled) return;
+    if (!this.state.isAnimateClose && (this.state.isOpen || this.state.isAnimateOpen)) {
+      this.animateClose();
+      if(this.props.backButtonClose && Platform.OS === 'android') BackButton.removeEventListener('hardwareBackPress', this.onBackPress)
     }
   }
 
-  close() {
-    if (this.props.isDisabled) return;
-    if (
-      !this.state.isAnimateClose &&
-      (this.state.isOpen || this.state.isAnimateOpen)
-    ) {
-      this.animateClose();
-      if (this.props.backButtonClose && Platform.OS === 'android')
-        BackHandler.removeEventListener('hardwareBackPress', this.onBackPress);
-    }
-  }
-}
+
+});
+
+module.exports = ModalBox;
