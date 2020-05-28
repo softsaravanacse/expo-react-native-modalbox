@@ -137,7 +137,7 @@ export default class ModalBox extends React.PureComponent {
     }
   }
 
-  UNSAFE_componentWillUnmount() {
+  componentWillUnmount() {
     if (this.subscriptions) this.subscriptions.forEach(sub => sub.remove());
     if (this.props.backButtonClose && Platform.OS === 'android')
       BackHandler.removeEventListener('hardwareBackPress', this.onBackPress);
