@@ -116,7 +116,15 @@ export default class ModalBox extends React.PureComponent {
       isInitialized: false,
       keyboardOffset: 0,
       pan: this.createPanResponder(position)
-    };    
+    };
+
+    // Needed for iOS because the keyboard covers the screen
+    if (Platform.OS === 'ios') {
+      this.subscriptions = [
+        Keyboard.addListener('keyboardWillChangeFrame', this.onKeyboardChange),
+        Keyboard.addListener('keyboardDidHide', this.onKeyboardHide)
+      ];
+    }
   }
 
   componentDidMount() {
@@ -133,13 +141,6 @@ export default class ModalBox extends React.PureComponent {
     if (this.subscriptions) this.subscriptions.forEach(sub => sub.remove());
     if (this.props.backButtonClose && Platform.OS === 'android')
       BackHandler.removeEventListener('hardwareBackPress', this.onBackPress);
-      // Needed for iOS because the keyboard covers the screen
-    if (Platform.OS === 'ios') {
-      this.subscriptions = [
-        Keyboard.addListener('keyboardWillChangeFrame', this.onKeyboardChange),
-        Keyboard.addListener('keyboardDidHide', this.onKeyboardHide)
-      ];
-    }
   }
 
   onBackPress() {
@@ -497,6 +498,11 @@ export default class ModalBox extends React.PureComponent {
           }
         ]}
         {...this.state.pan.panHandlers}>
+        {this.props.backdropPressToClose && (
+          <TouchableWithoutFeedback onPress={this.close}>
+            <View style={[styles.absolute]} />
+          </TouchableWithoutFeedback>
+        )}
         {this.props.children}
       </Animated.View>
     );
